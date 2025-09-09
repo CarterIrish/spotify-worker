@@ -1,0 +1,4 @@
+name = "spotify-worker"
+main = "src/index.js"               # path to your Worker code
+compatibility_date = "2025-09-09"  # or today's date
+type = "javascript"                 # ensure it's treated as JS
