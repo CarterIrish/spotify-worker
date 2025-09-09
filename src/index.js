@@ -1,38 +1,37 @@
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
+// Cloudflare Pages Worker
+export default async function handler(request, env) {
+  const url = new URL(request.url);
 
-    // Secrets from Cloudflare environment
-    const CLIENT_ID = env.SPOTIFY_CLIENT_ID;
-    const CLIENT_SECRET = env.SPOTIFY_CLIENT_SECRET;
-    const REDIRECT_URI = env.SPOTIFY_REDIRECT_URI;
+  // Secrets from environment
+  const CLIENT_ID = env.SPOTIFY_CLIENT_ID;
+  const CLIENT_SECRET = env.SPOTIFY_CLIENT_SECRET;
+  const REDIRECT_URI = env.SPOTIFY_REDIRECT_URI;
 
-    // In-memory token storage (demo purposes)
-    if (!globalThis.accessToken) globalThis.accessToken = null;
-    if (!globalThis.refreshToken) globalThis.refreshToken = null;
-    if (!globalThis.tokenExpiry) globalThis.tokenExpiry = 0;
+  // Simple in-memory token storage
+  if (!globalThis.accessToken) globalThis.accessToken = null;
+  if (!globalThis.refreshToken) globalThis.refreshToken = null;
+  if (!globalThis.tokenExpiry) globalThis.tokenExpiry = 0;
 
-    if (url.pathname === "/login") {
-      return spotifyLogin(CLIENT_ID, REDIRECT_URI);
-    } else if (url.pathname === "/callback") {
-      const code = url.searchParams.get("code");
-      return spotifyCallback(code, CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
-    } else if (url.pathname === "/currently-playing") {
-      return currentlyPlaying(globalThis.accessToken, globalThis.tokenExpiry);
-    }
-
-    return new Response("Not Found", { status: 404 });
+  if (url.pathname === "/login") {
+    return spotifyLogin(CLIENT_ID, REDIRECT_URI);
+  } else if (url.pathname === "/callback") {
+    const code = url.searchParams.get("code");
+    return spotifyCallback(code, CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+  } else if (url.pathname === "/currently-playing") {
+    return currentlyPlaying(globalThis.accessToken, globalThis.tokenExpiry);
   }
-};
 
-// Step 1: Redirect user to Spotify login
+  return new Response("Not Found", { status: 404 });
+}
+
+// Redirect user to Spotify login
 function spotifyLogin(clientId, redirectUri) {
   const scopes = encodeURIComponent("user-read-currently-playing");
   const authURL = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scopes}`;
   return Response.redirect(authURL, 302);
 }
 
-// Step 2: Handle callback and exchange code for token
+// Handle callback and exchange code for token
 async function spotifyCallback(code, clientId, clientSecret, redirectUri) {
   if (!code) return new Response("No code provided", { status: 400 });
 
@@ -56,7 +55,7 @@ async function spotifyCallback(code, clientId, clientSecret, redirectUri) {
   return new Response("Spotify login successful! Visit /currently-playing to see your track.");
 }
 
-// Step 3: Fetch currently playing track
+// Fetch currently playing track
 async function currentlyPlaying(accessToken, tokenExpiry) {
   if (!accessToken || Date.now() >= tokenExpiry) {
     return new Response("Access token missing or expired. Go to /login", { status: 401 });
